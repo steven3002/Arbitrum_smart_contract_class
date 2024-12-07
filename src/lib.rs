@@ -26,10 +26,11 @@ sol_storage! {
 #[public]
 impl Voters {
     pub fn signer(&mut self) -> Result<Vec<u8>, Vec<u8>> {
-        if self.state.get() > U8::from(2) {
+        let state = self.state.get();
+        if state > U8::from(2) {
             return Err(vec![0]);
         }
-        let state = self.state.get();
+
         let mut data = self.cax_y.setter(state);
         data.cax.set(msg::sender());
 
@@ -58,5 +59,33 @@ impl Voters {
 
         let mut voter_state = self.voted.setter(msg::sender());
         voter_state.set(true);
+    }
+
+    pub fn winner(&self) -> Address {
+        if U8::from(0) == self.state.get() {
+            let candidate = self.cax_y.getter(U8::from(0));
+            return candidate.cax.get();
+        }
+
+        let winner = {
+            let cax_1 = self.cax_y.getter(U8::from(0));
+            let cax_2 = self.cax_y.getter(U8::from(1));
+            let cax_3 = self.cax_y.getter(U8::from(2));
+            if cax_1.total_vote.get() > cax_2.total_vote.get() {
+                if cax_1.total_vote.get() > cax_3.total_vote.get() {
+                    return cax_1.cax.get();
+                } else {
+                    return cax_3.cax.get();
+                }
+            } else {
+                if cax_2.total_vote.get() > cax_3.total_vote.get() {
+                    return cax_2.cax.get();
+                } else {
+                    return cax_3.cax.get();
+                }
+            }
+        };
+
+        winner
     }
 }
